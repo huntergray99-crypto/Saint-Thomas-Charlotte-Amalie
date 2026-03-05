@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Charlotte Amalie Map — St. Thomas Cruise Guide</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #fff; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* HEADER */
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #0d3060 100%);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 2px solid #00b4d8;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-icon { font-size: 24px; }
+.header-title { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.1; }
+.header-sub { font-size: 11px; color: #00b4d8; font-weight: 500; }
+
+/* SEARCH */
+.search-wrap { position: relative; flex: 1; max-width: 280px; }
+.search-input {
+  width: 100%;
+  padding: 8px 14px 8px 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,180,216,0.4);
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+.search-input::placeholder { color: rgba(255,255,255,0.4); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; opacity: 0.5; pointer-events: none; }
+
+/* CATEGORY FILTERS */
+.filters {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: rgba(0,0,0,0.3);
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.7);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.filter-btn.active { background: var(--cat-color); border-color: var(--cat-color); color: #fff; }
+.filter-btn:hover { opacity: 0.85; }
+
+/* MAP + SIDEBAR LAYOUT */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* MAP */
+#map { flex: 1; position: relative; background: #0d1b2a; overflow: hidden; cursor: grab; }
+#map:active { cursor: grabbing; }
+#map-img { position: absolute; width: 100%; height: 100%; object-fit: cover; }
+.map-pins { position: absolute; inset: 0; }
+
+/* PIN */
+.pin {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.15s ease;
+}
+.pin:hover { transform: translate(-50%, -100%) scale(1.2); z-index: 20; }
+.pin.active { transform: translate(-50%, -100%) scale(1.25); z-index: 30; }
+.pin-body {
+  width: 32px;
+  height: 38px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+  position: relative;
+}
+.pin-emoji {
+  transform: rotate(45deg);
+  font-size: 15px;
+  line-height: 1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: rotate(45deg) translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+.pin-label {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.75);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.pin:hover .pin-label { opacity: 1; }
+
+/* SIDEBAR */
+.sidebar {
+  width: 300px;
+  background: #0d1b2a;
+  border-left: 1px solid rgba(0,180,216,0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,180,216,0.3) transparent;
+}
+.sidebar-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sidebar-item:hover { background: rgba(255,255,255,0.04); }
+.sidebar-item.active { background: rgba(0,180,216,0.1); border-left: 3px solid #00b4d8; }
+.sidebar-pin-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.sidebar-info { flex: 1; min-width: 0; }
+.sidebar-name { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-cat { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 1px; }
+.sidebar-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/* POPUP */
+.popup-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 200;
+  align-items: flex-end;
+  justify-content: center;
+}
+.popup-overlay.open { display: flex; }
+.popup {
+  background: #0d1b2a;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  border-top: 3px solid #00b4d8;
+  animation: slideUp 0.25s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.popup-close { float: right; font-size: 22px; cursor: pointer; color: rgba(255,255,255,0.5); background: none; border: none; line-height: 1; padding: 0; margin-left: 8px; }
+.popup-emoji { font-size: 40px; margin-bottom: 8px; }
+.popup-name { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.popup-category { font-size: 12px; color: #00b4d8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+.popup-desc { font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.6; margin-bottom: 14px; }
+.popup-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.popup-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+}
+.popup-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00b4d8, #0077a8);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.popup-btn:hover { opacity: 0.9; }
+
+/* RESULT COUNT */
+.result-count { padding: 8px 14px; font-size: 11px; color: rgba(255,255,255,0.4); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+
+/* MOBILE */
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .header-title { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <span class="header-icon">🏝️</span>
+    <div>
+      <div class="header-title">Charlotte Amalie</div>
+      <div class="header-sub">St. Thomas Cruise Guide</div>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="search" placeholder="Search locations..." oninput="filterPins()">
+  </div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters" id="filters"></div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- MAP -->
+  <div id="map">
+    <div class="map-pins" id="pins-container"></div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="result-count" id="result-count">Loading...</div>
+    <div class="sidebar-list" id="sidebar-list"></div>
+  </div>
+
+</div>
+
+<!-- POPUP -->
+<div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+  <div class="popup" id="popup">
+    <button class="popup-close" onclick="closePopupBtn()">✕</button>
+    <div id="popup-content"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CATEGORIES
+// ═══════════════════════════════════════════════
+const CATEGORIES = {
+  cruise:    { label: 'Cruise Ports',      emoji: '🚢', color: '#0077a8' },
+  shopping:  { label: 'Shopping',          emoji: '🛍️', color: '#7c3aed' },
+  dutyfree:  { label: 'Duty Free',         emoji: '💎', color: '#d4af37' },
+  food:      { label: 'Restaurants',       emoji: '🍽️', color: '#e85d04' },
+  bars:      { label: 'Bars & Drinks',     emoji: '🍹', color: '#10b981' },
+  beach:     { label: 'Beaches',           emoji: '🏖️', color: '#00b4d8' },
+  historic:  { label: 'Historic Sites',    emoji: '🏛️', color: '#c0392b' },
+  views:     { label: 'Views & Lookouts',  emoji: '🌅', color: '#f0a500' },
+  activity:  { label: 'Activities',        emoji: '🤿', color: '#06b6d4' },
+  transport: { label: 'Getting Around',    emoji: '🚕', color: '#6b7280' },
+};
+
+// ═══════════════════════════════════════════════
+// PINS — Charlotte Amalie, St. Thomas
+// Coordinates: x/y as % of map container
+// Center of map: Charlotte Amalie harbor area
+// lat ~18.3422, lng ~-64.9307
+// ═══════════════════════════════════════════════
+const PINS = [
+  // CRUISE PORTS
+  {
+    id: 1, name: 'Havensight Cruise Terminal', cat: 'cruise',
+    x: 68, y: 72,
+    desc: 'The main and busiest cruise terminal in St. Thomas. Most cruise lines dock here including Carnival, Norwegian, Royal Caribbean, and Celebrity. Havensight Mall is steps away with shops, restaurants, and ATMs right at the pier.',
+    badges: ['Main Terminal', 'Walking to Town', 'Havensight Mall Nearby'],
+    tip: 'Downtown Charlotte Amalie is a 20-25 min walk or a short $4-5 taxi ride from here.'
+  },
+  {
+    id: 2, name: 'Crown Bay Cruise Terminal', cat: 'cruise',
+    x: 22, y: 68,
+    desc: 'The second cruise terminal, located west of downtown. Cunard, Princess, Holland America, and larger ships (Oasis class) typically dock here. Further from town — take a taxi for about $5.',
+    badges: ['Second Terminal', 'Taxi to Town ~$5', 'Crown Bay Center'],
+    tip: 'Crown Bay has its own open-air shopping plaza with jewelry stores and amenities right off the ship.'
+  },
+
+  // SHOPPING & DUTY FREE
+  {
+    id: 3, name: 'Main Street — Duty Free Shopping', cat: 'dutyfree',
+    x: 44, y: 55,
+    desc: 'The heart of Charlotte Amalie shopping with 400+ stores offering duty-free goods. Jewelry, watches, perfume, electronics, liquor, and more at significant savings. Lines of shops fill the alleyways branching off Main Street.',
+    badges: ['400+ Stores', 'Duty Free', 'Jewelry & Watches', 'Liquor Deals'],
+    tip: 'US residents get an $800 duty-free allowance per person — more than any other Caribbean island. Liquor and jewelry are the best deals.'
+  },
+  {
+    id: 4, name: 'A.H. Riise Mall', cat: 'shopping',
+    x: 46, y: 53,
+    desc: 'One of the most famous shopping destinations in the Caribbean, housed in a historic 19th century building. Offers luxury goods, rum, jewelry, perfume, and a wide selection of duty-free items. Multiple wings and passages to explore.',
+    badges: ['Historic Building', 'Luxury Brands', 'Rum Selection'],
+    tip: 'Check out A.H. Riise Rum Bar inside — great spot for a rum tasting while you shop.'
+  },
+  {
+    id: 5, name: 'Havensight Mall', cat: 'shopping',
+    x: 66, y: 70,
+    desc: 'Large outdoor shopping mall right at the Havensight cruise pier. Perfect if you want to shop without going downtown. Includes Sunglass Hut, Crocs, jewelry stores, souvenir shops, restaurants, and a small grocery store (Gourmet Gallery).',
+    badges: ['At the Pier', 'Brand Name Stores', 'Restaurants Inside'],
+    tip: 'Gourmet Gallery inside Havensight Mall is great for picking up local packaged snacks and drinks.'
+  },
+  {
+    id: 6, name: 'Yacht Haven Grande', cat: 'dutyfree',
+    x: 58, y: 65,
+    desc: 'Upscale luxury shopping marina with designer brands including Gucci, Bulgari, Coach, and more. Beautiful waterfront setting overlooking the yacht marina. Best option for high-end luxury shopping on the island.',
+    badges: ['Luxury Brands', 'Gucci', 'Bulgari', 'Waterfront'],
+    tip: 'Even if you\'re not shopping, the marina views here are stunning — worth a stroll.'
+  },
+  {
+    id: 7, name: 'Market Square', cat: 'shopping',
+    x: 38, y: 50,
+    desc: 'Historic open-air market where you\'ll find authentic local handicrafts, jewelry, clothing, and Caribbean souvenirs from local vendors. More authentic and locally made than the chain shops on Main Street.',
+    badges: ['Local Crafts', 'Souvenirs', 'Authentic', 'Outdoor Market'],
+    tip: 'Great place to find unique, locally made items at better prices than the tourist shops.'
+  },
+  {
+    id: 8, name: 'Palm Passage', cat: 'shopping',
+    x: 43, y: 52,
+    desc: 'Beautiful covered alleyway lined with boutique shops and cafes. One of the most charming shopping passages in Charlotte Amalie with a mix of jewelry stores, clothing boutiques, and dining options.',
+    badges: ['Boutiques', 'Covered Passage', 'Charming'],
+    tip: 'Cafe Amalie is located in Palm Passage — perfect stop for Spanish food in a beautiful courtyard setting.'
+  },
+  {
+    id: 9, name: 'Crown Bay Center', cat: 'shopping',
+    x: 20, y: 66,
+    desc: 'Shopping plaza at the Crown Bay cruise terminal. Good selection of jewelry stores and branded goods. Convenient if your ship docks at Crown Bay. ATM, coffee, tourist info, and quick bites all available here.',
+    badges: ['At Crown Bay Pier', 'Jewelry Stores', 'ATM Available'],
+    tip: 'If you dock at Crown Bay, you can find most basics right here without needing a taxi to town.'
+  },
+
+  // RESTAURANTS & BARS
+  {
+    id: 10, name: 'The Greenhouse Restaurant', cat: 'food',
+    x: 48, y: 60,
+    desc: 'Popular open-air waterfront restaurant on the Charlotte Amalie waterfront. Extensive menu with something for everyone — burgers, seafood, local dishes. Great harbor and people-watching views from the front tables. Known for 2-for-1 drink specials.',
+    badges: ['Waterfront', 'Full Menu', 'Happy Hour Deals'],
+    tip: 'Sit near the front for the best harbor views. Great spot for lunch after shopping on Main Street.'
+  },
+  {
+    id: 11, name: 'Virgilio\'s', cat: 'food',
+    x: 42, y: 54,
+    desc: 'Family-owned authentic Italian restaurant tucked into a charming backstreet off the main waterfront. Operating for 30+ years with hand-painted murals and soft Italian music. Famous for Grandma\'s Lasagna and tableside Caesar Salad.',
+    badges: ['Italian', 'Local Favorite', '30+ Years', 'Romantic'],
+    tip: 'One of the best restaurants on the island. Make reservations — it fills up fast on cruise days.'
+  },
+  {
+    id: 12, name: 'Tap and Still Havensight', cat: 'food',
+    x: 65, y: 68,
+    desc: 'Casual burger and beer spot right near the Havensight cruise pier. Perfect for cruise passengers who don\'t want to travel far. Paper menus, customize your burger, sports on TV. Laid-back American vibe.',
+    badges: ['Near Havensight', 'Burgers', 'Cold Beers', 'Casual'],
+    tip: 'Best option if you want a quick, filling meal without heading into downtown.'
+  },
+  {
+    id: 13, name: 'Cafe Amalie', cat: 'food',
+    x: 44, y: 52,
+    desc: 'Beautiful open-air courtyard restaurant in Palm Passage serving Spanish food. Known for the Barcelona Burger and excellent service. Feels like a street cafe in Barcelona — casual but with exceptional food.',
+    badges: ['Spanish Cuisine', 'Outdoor Courtyard', 'Palm Passage'],
+    tip: 'Order the Barcelona Burger — locals swear by it. Beautiful setting for lunch.'
+  },
+  {
+    id: 14, name: 'Enkai Sushi', cat: 'food',
+    x: 50, y: 65,
+    desc: 'Popular sushi spot at the pier park with indoor and outdoor seating overlooking the waterfront. American-influenced sushi with creative rolls. Outdoor tables book fast — reserve in advance for sunset views over the marina.',
+    badges: ['Sushi', 'Waterfront Views', 'Reserve Outdoors'],
+    tip: 'Try the West of Philly Roll — one of their signature creations. Book outdoor seating ahead of time.'
+  },
+  {
+    id: 15, name: 'Rum Hut', cat: 'bars',
+    x: 60, y: 68,
+    desc: 'Laid-back outdoor bar near the cruise port with cheap drinks, locals, and great vibes. Barstools and wooden swings at the bar. Perfect place to end your day and mingle with locals before heading back to the ship.',
+    badges: ['Outdoor Bar', 'Local Spot', 'Cheap Drinks', 'Great Vibes'],
+    tip: 'This is the real deal — not a tourist trap. Cheap drinks, friendly locals, good times.'
+  },
+  {
+    id: 16, name: 'Paradise Bistro Bar & Grill', cat: 'bars',
+    x: 62, y: 42,
+    desc: 'Restaurant and bar perched atop Paradise Point with panoramic views over Charlotte Amalie harbor. Pricey but worth it for the views. Famous for the Bushwacker cocktail — a creamy, chocolate-rum concoction invented in St. Thomas in 1975.',
+    badges: ['Panoramic Views', 'Bushwacker Cocktail', 'Tourist Hotspot'],
+    tip: 'Must try: The Bushwacker — the famous cocktail invented here in 1975. Order it even if you don\'t eat.'
+  },
+  {
+    id: 17, name: 'Petite Pump Room', cat: 'bars',
+    x: 47, y: 62,
+    desc: 'Well-loved bar and restaurant positioned above the ferry terminal with stunning views of Charlotte Amalie harbor. Great for watching ferries, seaplanes landing, and the busy waterfront below. Generous food portions.',
+    badges: ['Harbor Views', 'Seaplane Watching', 'Above Ferry Terminal'],
+    tip: 'Grab a table on the terrace and watch the seaplanes land and take off — it\'s a show in itself.'
+  },
+  {
+    id: 18, name: 'Agave Havensight', cat: 'food',
+    x: 64, y: 69,
+    desc: 'Mexican restaurant at Havensight with cocktails and solid Mexican food. A notch above the typical casual spots — good for a sit-down meal with margaritas near the cruise pier.',
+    badges: ['Mexican', 'Cocktails', 'Near Havensight', 'Sit-Down'],
+    tip: 'Best Mexican food in the port area. Good margaritas to start your island day.'
+  },
+
+  // BEACHES
+  {
+    id: 19, name: 'Magens Bay Beach', cat: 'beach',
+    x: 45, y: 15,
+    desc: 'Voted one of the most beautiful beaches in the world by National Geographic. Mile-long white sand beach in a calm, protected bay. Lifeguards on duty, kayak and paddleboard rentals, restaurants, and changing facilities. Perfect for families.',
+    badges: ['World Famous', 'Calm Waters', 'Lifeguards', 'Kayak Rentals', '~20 min from port'],
+    tip: 'Go early — cruise passengers pour in mid-morning. Taxi from Havensight is about $10-12 each way.'
+  },
+  {
+    id: 20, name: 'Coki Beach', cat: 'beach',
+    x: 85, y: 30,
+    desc: 'Top snorkeling beach on St. Thomas with crystal clear water and colorful reef right off the shore. Adjacent to Coral World Ocean Park. Can get crowded with cruise passengers but the snorkeling is worth it.',
+    badges: ['Best Snorkeling', 'Coral Reef', 'Next to Coral World', '~25 min from port'],
+    tip: 'Bring your own snorkel gear — rentals available but bringing your own saves money.'
+  },
+  {
+    id: 21, name: 'Lindbergh Bay Beach', cat: 'beach',
+    x: 30, y: 72,
+    desc: 'Calm, beautiful beach close to the cruise terminals with stunning harbor views. Less crowded than Magens Bay. Popular with locals. Good for swimming and relaxing. Restaurants and beach bars nearby.',
+    badges: ['Near Port', 'Calm Waters', 'Less Crowded', 'Local Favorite'],
+    tip: 'One of the closest beaches to the cruise ports — great if you want sand without a long taxi ride.'
+  },
+  {
+    id: 22, name: 'Honeymoon Beach — Water Island', cat: 'beach',
+    x: 15, y: 78,
+    desc: 'Hidden gem on Water Island accessible by a short 5-10 minute ferry from Crown Bay Marina. Beautiful, uncrowded beach that rivals any on the island. Short walk from the ferry dock. Rivals Magens Bay without the cruise crowds.',
+    badges: ['Hidden Gem', 'Ferry Required', 'Uncrowded', 'Water Island'],
+    tip: 'Take the ferry from Crown Bay Marina — short ride, totally worth it to escape the cruise crowds.'
+  },
+  {
+    id: 23, name: 'Sapphire Beach', cat: 'beach',
+    x: 92, y: 38,
+    desc: 'Beautiful beach on the east end of St. Thomas with excellent snorkeling over coral reefs and calm, clear water. Resort beach with amenities, water sports rentals, and a beach bar. About 25-30 minutes from the cruise port.',
+    badges: ['Snorkeling', 'Coral Reef', 'Water Sports', '~30 min from port'],
+    tip: 'Combine with a visit to Red Hook and the east end for a full day trip from the cruise port.'
+  },
+
+  // HISTORIC SITES
+  {
+    id: 24, name: 'Fort Christian', cat: 'historic',
+    x: 50, y: 58,
+    desc: 'The oldest standing structure in the US Virgin Islands, built by the Danish in 1671. This striking red-and-white fort is a National Historic Landmark housing the St. Thomas Museum with exhibitions about colonial history. Admission $10/person.',
+    badges: ['Built 1671', 'National Landmark', 'Museum Inside', '$10 Admission'],
+    tip: 'Free to see from the outside. Pay the $10 to go inside — the colonial history exhibits are genuinely fascinating.'
+  },
+  {
+    id: 25, name: '99 Steps', cat: 'historic',
+    x: 41, y: 46,
+    desc: 'Iconic Danish staircase built from ballast bricks carried by European ships, connecting the lower town to upper Charlotte Amalie. Despite the name, there are actually 103 steps. Historic landmark and one of the most photographed spots on the island.',
+    badges: ['Built 18th Century', 'Instagram Spot', '103 Steps', 'Free'],
+    tip: 'Climb to the top for a great view. Wear comfortable shoes — the brick steps can be slippery when wet.'
+  },
+  {
+    id: 26, name: 'Blackbeard\'s Castle', cat: 'historic',
+    x: 40, y: 42,
+    desc: '17th-century watchtower rumored to have been used by the infamous pirate Edward Teach (Blackbeard). Now a popular tourist attraction with pirate lore, a small hotel, bar, and some of the best harbor views in Charlotte Amalie.',
+    badges: ['1679 Tower', 'Pirate History', 'Harbor Views', 'Bar On Site'],
+    tip: 'Located right near the 99 Steps. Get a drink at the bar and soak in the views while you hear pirate stories.'
+  },
+  {
+    id: 27, name: 'Emancipation Garden', cat: 'historic',
+    x: 48, y: 57,
+    desc: 'Historic public park in the heart of Charlotte Amalie commemorating the emancipation of slaves in 1848. Features a central gazebo, statues, and large iguanas sunbathing on the lawn. Peaceful green space amid the shopping bustle.',
+    badges: ['Historic', 'Free', 'Central Location', 'Iguanas!'],
+    tip: 'The iguanas here are huge and surprisingly tame — great photo opportunity. Right next to the shopping district.'
+  },
+  {
+    id: 28, name: 'St. Thomas Synagogue', cat: 'historic',
+    x: 43, y: 49,
+    desc: 'The second oldest synagogue in the Western Hemisphere, built in 1833. Beautiful historic building with a distinctive sand floor. Free to visit. Fascinating piece of the island\'s Jewish history dating back to the 17th century.',
+    badges: ['Built 1833', '2nd Oldest in Americas', 'Free to Visit', 'Sand Floor'],
+    tip: 'The sand floor is a unique feature — it honors the Jewish community\'s secret worship in Spain. Worth a quick visit.'
+  },
+  {
+    id: 29, name: 'Pirates Treasure Museum', cat: 'historic',
+    x: 63, y: 66,
+    desc: 'Small but fascinating museum about St. Thomas\'s rich pirate history. 10-minute walk from Havensight pier. Showcases items recovered from shipwrecks by Odyssey Marine Exploration with interactive exhibits about underwater recovery technology.',
+    badges: ['Pirate History', '10 min from Havensight', 'Interactive Exhibits', 'Shipwreck Artifacts'],
+    tip: 'Great option if you have kids. Quick visit — 45 minutes is plenty. Conveniently close to the cruise pier.'
+  },
+  {
+    id: 30, name: 'Legislature Building', cat: 'historic',
+    x: 50, y: 57,
+    desc: 'Historic colonial-era government building directly across the street from Fort Christian. Beautiful Danish colonial architecture — the bright green building is one of the most photographed facades in Charlotte Amalie.',
+    badges: ['Danish Colonial', 'Free to View', 'Next to Fort Christian'],
+    tip: 'Best viewed from the outside — a great photo stop. Right next to Fort Christian and Emancipation Garden.'
+  },
+
+  // VIEWS & LOOKOUTS
+  {
+    id: 31, name: 'Paradise Point Skyride', cat: 'views',
+    x: 63, y: 43,
+    desc: 'Gondola tram that whisks you up to Paradise Point in under 10 minutes from the Havensight port. Spectacular panoramic views of Charlotte Amalie harbor and surrounding islands. Restaurant and bar at the top. Go at sunset for best views.',
+    badges: ['Gondola Tram', '10 min from Port', 'Panoramic Views', 'Bar at Top'],
+    tip: 'Walk to the gondola from Havensight in about 10 minutes. If ship departs in the evening, go at sunset — magical views.'
+  },
+  {
+    id: 32, name: 'Drake\'s Seat', cat: 'views',
+    x: 35, y: 22,
+    desc: 'Scenic overlook at the top of St. Thomas with breathtaking views of Magens Bay and the surrounding islands. On a clear day you can see Puerto Rico and the British Virgin Islands. Free and accessible by taxi from town.',
+    badges: ['Free', 'Best Island Views', 'See BVIs & PR', 'Taxi Required'],
+    tip: 'Combine Drake\'s Seat with Magens Bay in one taxi trip — they\'re near each other and make for the perfect half-day.'
+  },
+  {
+    id: 33, name: 'Mountain Top', cat: 'views',
+    x: 30, y: 18,
+    desc: 'The highest accessible point on St. Thomas with stunning 360-degree views. Home of the famous banana daiquiri — invented here and made with Cruzan rum. Large duty-free shop on site. Popular cruise excursion stop.',
+    badges: ['Highest Point', 'Banana Daiquiri', 'Duty Free Shop', 'Taxi Required'],
+    tip: 'The banana daiquiri here is legendary — don\'t leave without trying one. Views of 15 islands on a clear day.'
+  },
+  {
+    id: 34, name: 'Charlotte Amalie Overlook', cat: 'views',
+    x: 48, y: 35,
+    desc: 'Scenic overlook with beautiful views down over Charlotte Amalie harbor and the cruise ships in port. A great photo spot without the crowds of Paradise Point. Free and accessible by taxi.',
+    badges: ['Harbor Views', 'Free', 'Less Crowded'],
+    tip: 'Great alternative to Paradise Point if you don\'t want to pay for the gondola — free views of the harbor.'
+  },
+
+  // ACTIVITIES
+  {
+    id: 35, name: 'Coral World Ocean Park', cat: 'activity',
+    x: 87, y: 28,
+    desc: 'Marine theme park featuring a unique underwater observatory, touch pools, sea turtle encounters, snorkeling trails, and stingray experiences. Great for families. Located next to Coki Beach.',
+    badges: ['Marine Park', 'Turtle Encounters', 'Underwater Observatory', 'Family Friendly'],
+    tip: 'Book the sea turtle encounter in advance — it sells out fast on cruise days.'
+  },
+  {
+    id: 36, name: 'St. John Ferry (Cruz Bay)', cat: 'activity',
+    x: 52, y: 63,
+    desc: 'Regular ferry service from Charlotte Amalie to Cruz Bay, St. John — about 30-45 minutes each way. St. John has the Virgin Islands National Park, stunning beaches, and a laid-back barefoot vibe very different from busy Charlotte Amalie.',
+    badges: ['30-45 min Ferry', 'National Park', 'Trunk Bay', 'Day Trip'],
+    tip: 'Budget at least 4-5 hours for St. John. Check ferry times carefully — you must be back before your ship leaves!'
+  },
+  {
+    id: 37, name: 'Phantasea Botanical Garden', cat: 'activity',
+    x: 32, y: 30,
+    desc: 'Small, shady tropical botanical garden about 15 minutes from the harbor. Full of local plants, flowers, and a stunning orchid collection. Beautiful views of neighboring islands. Self-guided tours or guided walks available.',
+    badges: ['Botanical Garden', 'Orchids', 'Island Views', 'Quiet & Shady'],
+    tip: 'A peaceful escape from the cruise crowds. Self-guided tour takes about an hour — perfect for plant lovers.'
+  },
+
+  // TRANSPORT
+  {
+    id: 38, name: 'Safari Taxi Stand — Havensight', cat: 'transport',
+    x: 67, y: 73,
+    desc: 'Main taxi pick-up area at Havensight cruise pier. Taxis in St. Thomas are open-air safari trucks — flag one down or hop on a shared route. Fares to downtown: ~$4-5. Fares to Magens Bay: ~$10-12. Fares to Mountain Top: ~$12.',
+    badges: ['Safari Trucks', 'Downtown ~$4', 'Magens Bay ~$10', 'Shared Routes'],
+    tip: 'St. Thomas taxis are shared safari trucks — totally normal! Agree on the price BEFORE getting in.'
+  },
+  {
+    id: 39, name: 'Water Island Ferry — Crown Bay', cat: 'transport',
+    x: 18, y: 72,
+    desc: 'Short 5-10 minute ferry to Water Island departing from Crown Bay Marina. Runs several times per day. Leads to Honeymoon Beach — one of the most beautiful and uncrowded beaches in the USVI.',
+    badges: ['5-10 min Ferry', 'Water Island', 'Honeymoon Beach Access'],
+    tip: 'Check the ferry schedule — limited departures. Great way to escape the cruise crowds on Honeymoon Beach.'
+  },
+  {
+    id: 40, name: 'Charlotte Amalie Ferry Terminal', cat: 'transport',
+    x: 48, y: 63,
+    desc: 'Main ferry terminal for boats to St. John (Cruz Bay), Tortola, and other USVI destinations. Regular service throughout the day. Book day trips to St. John from here for one of the best shore excursions in the Caribbean.',
+    badges: ['St. John Ferry', 'Tortola', 'Regular Service'],
+    tip: 'Buy ferry tickets in advance during peak cruise season — they can sell out. Round trip to St. John is about $30-35.'
+  },
+];
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let activeFilter = 'all';
+let activePin = null;
+let visiblePins = [...PINS];
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+function init() {
+  buildFilters();
+  renderPins();
+  renderSidebar();
+}
+
+// ═══════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════
+function buildFilters() {
+  const container = document.getElementById('filters');
+  // All button
+  const allBtn = document.createElement('button');
+  allBtn.className = 'filter-btn active';
+  allBtn.style.setProperty('--cat-color', '#00b4d8');
+  allBtn.textContent = '🗺️ All';
+  allBtn.onclick = () => setFilter('all', allBtn);
+  container.appendChild(allBtn);
+
+  Object.entries(CATEGORIES).forEach(([key, cat]) => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.style.setProperty('--cat-color', cat.color);
+    btn.innerHTML = `${cat.emoji} ${cat.label}`;
+    btn.dataset.cat = key;
+    btn.onclick = () => setFilter(key, btn);
+    container.appendChild(btn);
+  });
+}
+
+function setFilter(cat, btn) {
+  activeFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterPins();
+}
+
+function filterPins() {
+  const q = document.getElementById('search').value.toLowerCase();
+  visiblePins = PINS.filter(p => {
+    const matchCat = activeFilter === 'all' || p.cat === activeFilter;
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q) || (p.badges || []).some(b => b.toLowerCase().includes(q));
+    return matchCat && matchSearch;
+  });
+  renderPins();
+  renderSidebar();
+}
+
+// ═══════════════════════════════════════════════
+// RENDER PINS
+// ═══════════════════════════════════════════════
+function renderPins() {
+  const container = document.getElementById('pins-container');
+  container.innerHTML = '';
+  visiblePins.forEach(pin => {
+    const cat = CATEGORIES[pin.cat];
+    const el = document.createElement('div');
+    el.className = 'pin' + (activePin === pin.id ? ' active' : '');
+    el.style.left = pin.x + '%';
+    el.style.top = pin.y + '%';
+    el.dataset.id = pin.id;
+
+    el.innerHTML = `
+      <div class="pin-label">${pin.name}</div>
+      <div class="pin-body" style="background:${cat.color}">
+        <span class="pin-emoji">${cat.emoji}</span>
+      </div>
+    `;
+    el.onclick = () => openPopup(pin.id);
+    container.appendChild(el);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// RENDER SIDEBAR
+// ═══════════════════════════════════════════════
+function renderSidebar() {
+  const list = document.getElementById('sidebar-list');
+  const count = document.getElementById('result-count');
+  count.textContent = `${visiblePins.length} location${visiblePins.length !== 1 ? 's' : ''}`;
+  list.innerHTML = '';
+
+  visiblePins.forEach(pin => {
+    const cat = CATEGORIES[pin.cat];
+    const item = document.createElement('div');
+    item.className = 'sidebar-item' + (activePin === pin.id ? ' active' : '');
+    item.dataset.id = pin.id;
+    item.innerHTML = `
+      <div class="sidebar-pin-icon" style="background:${cat.color}22;color:${cat.color}">${cat.emoji}</div>
+      <div class="sidebar-info">
+        <div class="sidebar-name">${pin.name}</div>
+        <div class="sidebar-cat">${cat.label}</div>
+        ${pin.badges && pin.badges[0] ? `<span class="sidebar-badge" style="background:${cat.color}22;color:${cat.color}">${pin.badges[0]}</span>` : ''}
+      </div>
+    `;
+    item.onclick = () => openPopup(pin.id);
+    list.appendChild(item);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// POPUP
+// ═══════════════════════════════════════════════
+function openPopup(id) {
+  const pin = PINS.find(p => p.id === id);
+  if (!pin) return;
+  activePin = id;
+  renderPins();
+  renderSidebar();
+
+  const cat = CATEGORIES[pin.cat];
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pin.name + ' Charlotte Amalie St Thomas')}`;
+
+  document.getElementById('popup-content').innerHTML = `
+    <div class="popup-emoji">${cat.emoji}</div>
+    <div class="popup-name">${pin.name}</div>
+    <div class="popup-category">${cat.label}</div>
+    <div class="popup-desc">${pin.desc}</div>
+    ${pin.badges ? `<div class="popup-badges">${pin.badges.map(b => `<span class="popup-badge">${b}</span>`).join('')}</div>` : ''}
+    ${pin.tip ? `<div class="popup-desc" style="background:rgba(0,180,216,0.08);border-left:3px solid #00b4d8;padding:10px 12px;border-radius:8px;margin-bottom:12px;">💡 <strong>Local Tip:</strong> ${pin.tip}</div>` : ''}
+    <a class="popup-btn" href="${mapsUrl}" target="_blank">📍 Open in Google Maps</a>
+  `;
+  document.getElementById('popup-overlay').classList.add('open');
+
+  // Scroll sidebar to active item
+  const activeItem = document.querySelector('.sidebar-item.active');
+  if (activeItem) activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closePopup(e) {
+  if (e.target === document.getElementById('popup-overlay')) {
+    closePopupBtn();
+  }
+}
+
+function closePopupBtn() {
+  document.getElementById('popup-overlay').classList.remove('open');
+  activePin = null;
+  renderPins();
+  renderSidebar();
+}
+
+// ═══════════════════════════════════════════════
+// MAP BACKGROUND — use OpenStreetMap tile
+// ═══════════════════════════════════════════════
+function setupMap() {
+  const map = document.getElementById('map');
+  map.style.backgroundImage = `url('https://tile.openstreetmap.org/13/2462/3438.png')`;
+  map.style.backgroundSize = 'cover';
+  map.style.backgroundPosition = 'center';
+}
+
+init();
+</script>
+</body>
+</html>
